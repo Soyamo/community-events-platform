@@ -1,8 +1,7 @@
 from datetime import datetime
 from typing import Optional
 
-from pydantic import BaseModel, Field, field_validator
-
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 class EventCreate(BaseModel):
     title: str = Field(min_length=1, max_length=200)
@@ -20,6 +19,8 @@ class EventCreate(BaseModel):
 
 
 class EventResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     title: str
     description: Optional[str]
@@ -28,16 +29,14 @@ class EventResponse(BaseModel):
     status: str
     organiser_id: str
 
-    class Config:
-        from_attributes = True
 
 class RegistrationResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     event_id: int
     registered_at: datetime
 
-    class Config:
-        from_attributes = True
 
 class EventUpdate(BaseModel):
     title: Optional[str] = Field(default=None, min_length=1, max_length=200)
