@@ -132,3 +132,61 @@ def publish_event(
     db.refresh(event)
 
     return event
+
+@app.post(
+    "/api/events/{event_id}/registrations",
+    response_model=schemas.RegistrationResponse,
+    status_code=status.HTTP_201_CREATED
+)
+def register_interest(
+    event_id: int,
+    db: Session = Depends(get_db)
+):
+    event = (
+        db.query(models.Event)
+        .filter(models.Event.id == event_id)
+        .first()
+    )
+
+    if event is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={
+                "code": "EVENT_NOT_FOUND",
+                "message": "Event not found."
+            }
+        )
+
+    if event.status != models.EventStatus.PUBLISHED:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={
+                "code": "EVENT_NOT_PUBLISHED",
+                "message": "Registration is only available for published events."
+            }
+        )
+
+    registration_count = (
+        db.query(models.Registration)
+        .filter(models.Registration.event_id == event_id)
+        .count()
+    )
+
+    if registration_count >= event.capacity:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={
+                "code": "EVENT_FULL",
+                "message": "Registration is no longer available because this event is full."
+            }
+        )
+
+    registration = models.Registration(
+        event_id=event_id
+    )
+
+    db.add(registration)
+    db.commit()
+    db.refresh(registration)
+
+    return registration

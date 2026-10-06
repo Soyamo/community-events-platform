@@ -1,6 +1,6 @@
 import enum
 
-from sqlalchemy import Column, DateTime, Enum, Integer, String, Text
+from sqlalchemy import Column, DateTime, Enum, ForeignKey, Integer, String, Text
 from sqlalchemy.sql import func
 
 from .database import Base
@@ -56,4 +56,21 @@ class Event(Base):
         DateTime,
         server_default=func.now(),
         onupdate=func.now()
+    )
+
+class Registration(Base):
+    __tablename__ = "registrations"
+
+    id = Column(Integer, primary_key=True, index=True)
+
+    event_id = Column(
+        Integer,
+        ForeignKey("events.id"),
+        nullable=False
+    )
+
+    registered_at = Column(
+        DateTime,
+        server_default=func.now(),
+        nullable=False
     )

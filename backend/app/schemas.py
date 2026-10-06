@@ -30,3 +30,11 @@ class EventResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+class RegistrationResponse(BaseModel):
+    id: int
+    event_id: int
+    registered_at: datetime
+
+    class Config:
+        from_attributes = True
