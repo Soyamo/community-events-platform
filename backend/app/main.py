@@ -1,5 +1,6 @@
 from fastapi import Depends, FastAPI, HTTPException, status
 from sqlalchemy.orm import Session
+from typing import List
 
 from . import models, schemas
 from .database import Base, engine, get_db
@@ -50,3 +51,45 @@ def create_event(
     db.refresh(new_event)
 
     return new_event
+
+@app.get(
+    "/api/events",
+    response_model=List[schemas.EventResponse]
+)
+def get_published_events(
+    db: Session = Depends(get_db)
+):
+    events = (
+        db.query(models.Event)
+        .filter(models.Event.status == models.EventStatus.PUBLISHED)
+        .all()
+    )
+
+    return events
+
+
+@app.get(
+    "/api/organisers/{organiser_id}/events",
+    response_model=List[schemas.EventResponse]
+)
+def get_organiser_events(
+    organiser_id: str,
+    db: Session = Depends(get_db)
+):
+    events = (
+        db.query(models.Event)
+        .filter(models.Event.organiser_id == organiser_id)
+        .all()
+    )
+
+    return events
+
+
+@app.get(
+    "/api/admin/events",
+    response_model=List[schemas.EventResponse]
+)
+def get_all_events(
+    db: Session = Depends(get_db)
+):
+    return db.query(models.Event).all()
