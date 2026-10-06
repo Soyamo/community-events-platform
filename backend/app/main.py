@@ -1,5 +1,7 @@
 from fastapi import Depends, FastAPI, HTTPException, status
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from typing import List
 import uuid
@@ -27,7 +29,12 @@ app.add_middleware(
 
 @app.middleware("http")
 async def request_logging_middleware(request: Request, call_next):
-    request_id = request.headers.get("X-Request-ID", str(uuid.uuid4()))
+    request_id = request.headers.get(
+        "X-Request-ID",
+        str(uuid.uuid4())
+    )
+
+    request.state.request_id = request_id
 
     logger.info(
         "request_received request_id=%s method=%s path=%s",
@@ -50,6 +57,73 @@ async def request_logging_middleware(request: Request, call_next):
 
     return response
 
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(
+    request: Request,
+    exc: RequestValidationError
+):
+    request_id = getattr(
+        request.state,
+        "request_id",
+        "unknown"
+    )
+
+    logger.warning(
+        "validation_failed request_id=%s path=%s errors=%s",
+        request_id,
+        request.url.path,
+        exc.errors()
+    )
+
+    return JSONResponse(
+        status_code=status.HTTP_400_BAD_REQUEST,
+        content={
+            "code": "VALIDATION_ERROR",
+            "message": "The request contains invalid data.",
+            "errors": [
+                {
+                    "field": ".".join(
+                        str(part)
+                        for part in error["loc"]
+                        if part != "body"
+                    ),
+                    "message": error["msg"]
+                }
+                for error in exc.errors()
+            ]
+        },
+        headers={
+            "X-Request-ID": request_id
+        }
+    )
+
+@app.exception_handler(Exception)
+async def unexpected_exception_handler(
+    request: Request,
+    exc: Exception
+):
+    request_id = getattr(
+        request.state,
+        "request_id",
+        "unknown"
+    )
+
+    logger.exception(
+        "unexpected_error request_id=%s path=%s",
+        request_id,
+        request.url.path
+    )
+
+    return JSONResponse(
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        content={
+            "code": "INTERNAL_SERVER_ERROR",
+            "message": "An unexpected server error occurred."
+        },
+        headers={
+            "X-Request-ID": request_id
+        }
+    )
 
 @app.get("/")
 def root():

@@ -94,7 +94,13 @@ def test_create_event_successfully():
 def test_reject_invalid_capacity():
     response = create_event(capacity=0)
 
-    assert response.status_code == 422
+    assert response.status_code == 400
+
+    data = response.json()
+
+    assert data["code"] == "VALIDATION_ERROR"
+    assert data["message"] == "The request contains invalid data."
+
 
 
 def test_reject_past_event_date():
@@ -102,7 +108,9 @@ def test_reject_past_event_date():
         date_time=past_date()
     )
 
-    assert response.status_code == 422
+    assert response.status_code == 400
+
+    assert response.json()["code"] == "VALIDATION_ERROR"
 
 
 def test_visitor_cannot_see_unpublished_event():
