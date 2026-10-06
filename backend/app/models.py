@@ -74,3 +74,31 @@ class Registration(Base):
         server_default=func.now(),
         nullable=False
     )
+
+class Activity(Base):
+    __tablename__ = "activities"
+
+    id = Column(Integer, primary_key=True, index=True)
+
+    event_id = Column(
+        Integer,
+        ForeignKey("events.id"),
+        nullable=False
+    )
+
+    registration_id = Column(
+        Integer,
+        ForeignKey("registrations.id"),
+        nullable=True
+    )
+
+    action = Column(
+        String(100),
+        nullable=False
+    )
+
+    created_at = Column(
+        DateTime,
+        server_default=func.now(),
+        nullable=False
+    )

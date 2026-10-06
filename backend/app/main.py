@@ -1,7 +1,10 @@
 from fastapi import Depends, FastAPI, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List
+import uuid
 
+from fastapi import Request
+from .logging_config import logger
 from . import models, schemas
 from .database import Base, engine, get_db
 
@@ -12,6 +15,31 @@ app = FastAPI(
     description="Backend API for the Community Events Platform",
     version="1.0.0"
 )
+
+@app.middleware("http")
+async def request_logging_middleware(request: Request, call_next):
+    request_id = request.headers.get("X-Request-ID", str(uuid.uuid4()))
+
+    logger.info(
+        "request_received request_id=%s method=%s path=%s",
+        request_id,
+        request.method,
+        request.url.path
+    )
+
+    response = await call_next(request)
+
+    response.headers["X-Request-ID"] = request_id
+
+    logger.info(
+        "request_completed request_id=%s method=%s path=%s status_code=%s",
+        request_id,
+        request.method,
+        request.url.path,
+        response.status_code
+    )
+
+    return response
 
 
 @app.get("/")
@@ -128,8 +156,20 @@ def publish_event(
 
     event.status = models.EventStatus.PUBLISHED
 
+    activity = models.Activity(
+        event_id=event.id,
+        action="EVENT_PUBLISHED"
+    )
+
+    db.add(activity)
+
     db.commit()
     db.refresh(event)
+
+    logger.info(
+        "event_published event_id=%s outcome=success",
+        event.id
+    )
 
     return event
 
@@ -188,6 +228,21 @@ def register_interest(
     db.add(registration)
     db.commit()
     db.refresh(registration)
+
+    activity = models.Activity(
+        event_id=event_id,
+        registration_id=registration.id,
+        action="REGISTRATION_CREATED"
+    )
+
+    db.add(activity)
+    db.commit()
+
+    logger.info(
+        "registration_created event_id=%s registration_id=%s outcome=success",
+        event_id,
+        registration.id
+    )
 
     return registration
 
