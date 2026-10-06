@@ -1,14 +1,39 @@
 import { useEffect, useState } from "react";
 import "./App.css";
-import { getPublishedEvents } from "./services/api";
+import {
+  getPublishedEvents,
+  registerForEvent,
+} from "./services/api";
 
 function App() {
+  const [registrationMessage, setRegistrationMessage] = useState("");
+  const [registrationError, setRegistrationError] = useState("");
+  const [registeringEventId, setRegisteringEventId] = useState(null);
+
   const [role, setRole] = useState("visitor");
   const [organiserId, setOrganiserId] = useState("organiser-1");
 
   const [events, setEvents] = useState([]);
   const [loadingEvents, setLoadingEvents] = useState(false);
   const [eventError, setEventError] = useState("");
+
+  async function handleRegistration(eventId) {
+    try {
+      setRegisteringEventId(eventId);
+      setRegistrationMessage("");
+      setRegistrationError("");
+
+      const registration = await registerForEvent(eventId);
+
+      setRegistrationMessage(
+        `Interest registered successfully. Registration ID: ${registration.id}`
+      );
+    } catch (error) {
+      setRegistrationError(error.message);
+    } finally {
+      setRegisteringEventId(null);
+    }
+  }
 
   useEffect(() => {
     if (role !== "visitor") {
@@ -19,6 +44,8 @@ function App() {
       try {
         setLoadingEvents(true);
         setEventError("");
+        setRegistrationMessage("");
+        setRegistrationError("");
 
         const data = await getPublishedEvents();
         setEvents(data);
@@ -74,10 +101,24 @@ function App() {
             <h2>Published Events</h2>
             <p>Browse available community events.</p>
 
+            {registrationMessage && (
+              <p className="success-message">
+                {registrationMessage}
+              </p>
+            )}
+
+            {registrationError && (
+              <p className="error-message">
+                {registrationError}
+              </p>
+            )}
+
             {loadingEvents && <p>Loading events...</p>}
 
             {eventError && (
-              <p className="error-message">{eventError}</p>
+              <p className="error-message">
+                {eventError}
+              </p>
             )}
 
             {!loadingEvents &&
@@ -110,6 +151,16 @@ function App() {
                   <span className="status-badge">
                     {event.status}
                   </span>
+
+                  <button
+                    className="primary-button"
+                    onClick={() => handleRegistration(event.id)}
+                    disabled={registeringEventId === event.id}
+                  >
+                    {registeringEventId === event.id
+                      ? "Registering..."
+                      : "Register Interest"}
+                  </button>
                 </article>
               ))}
             </div>

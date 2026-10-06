@@ -9,3 +9,23 @@ export async function getPublishedEvents() {
 
   return response.json();
 }
+
+export async function registerForEvent(eventId) {
+  const response = await fetch(
+    `${API_BASE_URL}/api/events/${eventId}/registrations`,
+    {
+      method: "POST",
+    }
+  );
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    const message =
+      data?.detail?.message || "Registration failed.";
+
+    throw new Error(message);
+  }
+
+  return data;
+}
