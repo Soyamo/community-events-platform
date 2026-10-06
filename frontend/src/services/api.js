@@ -29,3 +29,68 @@ export async function registerForEvent(eventId) {
 
   return data;
 }
+
+export async function getOrganiserEvents(organiserId) {
+  const response = await fetch(
+    `${API_BASE_URL}/api/organisers/${organiserId}/events`
+  );
+
+  if (!response.ok) {
+    throw new Error("Failed to load organiser events.");
+  }
+
+  return response.json();
+}
+
+export async function createEvent(eventData) {
+  const response = await fetch(`${API_BASE_URL}/api/events`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(eventData),
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    const message =
+      data?.detail?.message ||
+      data?.detail?.[0]?.msg ||
+      "Failed to create event.";
+
+    throw new Error(message);
+  }
+
+  return data;
+}
+
+export async function updateEvent(
+  organiserId,
+  eventId,
+  eventData
+) {
+  const response = await fetch(
+    `${API_BASE_URL}/api/organisers/${organiserId}/events/${eventId}`,
+    {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(eventData),
+    }
+  );
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    const message =
+      data?.detail?.message ||
+      data?.detail?.[0]?.msg ||
+      "Failed to update event.";
+
+    throw new Error(message);
+  }
+
+  return data;
+}
