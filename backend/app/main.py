@@ -1,7 +1,8 @@
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI, HTTPException, status
+from sqlalchemy.orm import Session
 
-from .database import Base, engine
-from . import models
+from . import models, schemas
+from .database import Base, engine, get_db
 
 Base.metadata.create_all(bind=engine)
 
@@ -24,3 +25,28 @@ def health_check():
     return {
         "status": "healthy"
     }
+
+
+@app.post(
+    "/api/events",
+    response_model=schemas.EventResponse,
+    status_code=status.HTTP_201_CREATED
+)
+def create_event(
+    event: schemas.EventCreate,
+    db: Session = Depends(get_db)
+):
+    new_event = models.Event(
+        title=event.title,
+        description=event.description,
+        date_time=event.date_time,
+        capacity=event.capacity,
+        organiser_id=event.organiser_id,
+        status=models.EventStatus.PENDING_REVIEW
+    )
+
+    db.add(new_event)
+    db.commit()
+    db.refresh(new_event)
+
+    return new_event
