@@ -190,3 +190,41 @@ def register_interest(
     db.refresh(registration)
 
     return registration
+
+@app.put(
+    "/api/organisers/{organiser_id}/events/{event_id}",
+    response_model=schemas.EventResponse
+)
+def update_event(
+    organiser_id: str,
+    event_id: int,
+    event_update: schemas.EventUpdate,
+    db: Session = Depends(get_db)
+):
+    event = (
+        db.query(models.Event)
+        .filter(
+            models.Event.id == event_id,
+            models.Event.organiser_id == organiser_id
+        )
+        .first()
+    )
+
+    if event is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={
+                "code": "EVENT_NOT_FOUND",
+                "message": "Event not found for this organiser."
+            }
+        )
+
+    update_data = event_update.model_dump(exclude_unset=True)
+
+    for field, value in update_data.items():
+        setattr(event, field, value)
+
+    db.commit()
+    db.refresh(event)
+
+    return event

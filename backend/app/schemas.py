@@ -38,3 +38,16 @@ class RegistrationResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+class EventUpdate(BaseModel):
+    title: Optional[str] = Field(default=None, min_length=1, max_length=200)
+    description: Optional[str] = None
+    date_time: Optional[datetime] = None
+    capacity: Optional[int] = Field(default=None, gt=0)
+
+    @field_validator("date_time")
+    @classmethod
+    def validate_future_date(cls, value):
+        if value is not None and value <= datetime.now():
+            raise ValueError("Event date and time must be in the future.")
+        return value
