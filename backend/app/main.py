@@ -93,3 +93,42 @@ def get_all_events(
     db: Session = Depends(get_db)
 ):
     return db.query(models.Event).all()
+
+@app.post(
+    "/api/admin/events/{event_id}/publish",
+    response_model=schemas.EventResponse
+)
+def publish_event(
+    event_id: int,
+    db: Session = Depends(get_db)
+):
+    event = (
+        db.query(models.Event)
+        .filter(models.Event.id == event_id)
+        .first()
+    )
+
+    if event is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={
+                "code": "EVENT_NOT_FOUND",
+                "message": "Event not found."
+            }
+        )
+
+    if event.status == models.EventStatus.PUBLISHED:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={
+                "code": "EVENT_ALREADY_PUBLISHED",
+                "message": "Event is already published."
+            }
+        )
+
+    event.status = models.EventStatus.PUBLISHED
+
+    db.commit()
+    db.refresh(event)
+
+    return event
