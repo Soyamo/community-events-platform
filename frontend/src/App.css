@@ -174,3 +174,10 @@
 .secondary-button:hover {
   background: #f3f4f6;
 }
+
+.published-label {
+  margin-top: 16px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #166534;
+}

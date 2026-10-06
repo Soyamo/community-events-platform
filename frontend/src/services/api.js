@@ -94,3 +94,33 @@ export async function updateEvent(
 
   return data;
 }
+
+export async function getAllEvents() {
+  const response = await fetch(`${API_BASE_URL}/api/admin/events`);
+
+  if (!response.ok) {
+    throw new Error("Failed to load events.");
+  }
+
+  return response.json();
+}
+
+export async function publishEvent(eventId) {
+  const response = await fetch(
+    `${API_BASE_URL}/api/admin/events/${eventId}/publish`,
+    {
+      method: "POST",
+    }
+  );
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    const message =
+      data?.detail?.message || "Failed to publish event.";
+
+    throw new Error(message);
+  }
+
+  return data;
+}

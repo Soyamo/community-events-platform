@@ -2,8 +2,10 @@ import { useEffect, useState } from "react";
 import "./App.css";
 import {
   createEvent,
+  getAllEvents,
   getOrganiserEvents,
   getPublishedEvents,
+  publishEvent,
   registerForEvent,
   updateEvent,
 } from "./services/api";
@@ -33,6 +35,12 @@ function App() {
   const [events, setEvents] = useState([]);
   const [loadingEvents, setLoadingEvents] = useState(false);
   const [eventError, setEventError] = useState("");
+
+  const [adminEvents, setAdminEvents] = useState([]);
+  const [adminLoading, setAdminLoading] = useState(false);
+  const [adminError, setAdminError] = useState("");
+  const [adminMessage, setAdminMessage] = useState("");
+  const [publishingEventId, setPublishingEventId] = useState(null);
 
   async function handleRegistration(eventId) {
     try {
@@ -135,6 +143,25 @@ function App() {
     }
   }
 
+  async function handlePublishEvent(eventId) {
+    try {
+      setPublishingEventId(eventId);
+      setAdminError("");
+      setAdminMessage("");
+
+      await publishEvent(eventId);
+
+      setAdminMessage("Event published successfully.");
+
+      const refreshedEvents = await getAllEvents();
+      setAdminEvents(refreshedEvents);
+    } catch (error) {
+      setAdminError(error.message);
+    } finally {
+      setPublishingEventId(null);
+    }
+  }
+
   useEffect(() => {
     if (role !== "visitor") {
       return;
@@ -182,6 +209,29 @@ function App() {
     loadOrganiserEvents();
   }, [role, organiserId]);
 
+  useEffect(() => {
+    if (role !== "admin") {
+      return;
+    }
+
+    async function loadAdminEvents() {
+      try {
+        setAdminLoading(true);
+        setAdminError("");
+        setAdminMessage("");
+
+        const data = await getAllEvents();
+        setAdminEvents(data);
+      } catch (error) {
+        setAdminError(error.message);
+      } finally {
+        setAdminLoading(false);
+      }
+    }
+
+    loadAdminEvents();
+  }, [role]);
+
   return (
     <div className="app-shell">
       <header className="app-header">
@@ -205,7 +255,9 @@ function App() {
 
           {role === "organiser" && (
             <>
-              <label htmlFor="organiser">Organiser</label>
+              <label htmlFor="organiser">
+                Organiser
+              </label>
 
               <select
                 id="organiser"
@@ -242,7 +294,9 @@ function App() {
               </p>
             )}
 
-            {loadingEvents && <p>Loading events...</p>}
+            {loadingEvents && (
+              <p>Loading events...</p>
+            )}
 
             {eventError && (
               <p className="error-message">
@@ -339,7 +393,9 @@ function App() {
                   : "Create Event"}
               </h3>
 
-              <label htmlFor="title">Title</label>
+              <label htmlFor="title">
+                Title
+              </label>
 
               <input
                 id="title"
@@ -464,8 +520,90 @@ function App() {
             <h2>Administrator</h2>
 
             <p>
-              Review all events and publish pending events.
+              Review all events and publish events awaiting
+              review.
             </p>
+
+            {adminMessage && (
+              <p className="success-message">
+                {adminMessage}
+              </p>
+            )}
+
+            {adminError && (
+              <p className="error-message">
+                {adminError}
+              </p>
+            )}
+
+            {adminLoading && (
+              <p>Loading events...</p>
+            )}
+
+            {!adminLoading &&
+              !adminError &&
+              adminEvents.length === 0 && (
+                <p>
+                  No events are currently available.
+                </p>
+              )}
+
+            <div className="event-grid">
+              {adminEvents.map((event) => (
+                <article
+                  className="event-card"
+                  key={event.id}
+                >
+                  <h3>{event.title}</h3>
+
+                  <p>{event.description}</p>
+
+                  <p>
+                    <strong>Date:</strong>{" "}
+                    {new Date(
+                      event.date_time
+                    ).toLocaleString()}
+                  </p>
+
+                  <p>
+                    <strong>Capacity:</strong>{" "}
+                    {event.capacity}
+                  </p>
+
+                  <p>
+                    <strong>Organiser:</strong>{" "}
+                    {event.organiser_id}
+                  </p>
+
+                  <span className="status-badge">
+                    {event.status}
+                  </span>
+
+                  {event.status ===
+                    "PENDING_REVIEW" && (
+                    <button
+                      className="primary-button"
+                      onClick={() =>
+                        handlePublishEvent(event.id)
+                      }
+                      disabled={
+                        publishingEventId === event.id
+                      }
+                    >
+                      {publishingEventId === event.id
+                        ? "Publishing..."
+                        : "Publish Event"}
+                    </button>
+                  )}
+
+                  {event.status === "PUBLISHED" && (
+                    <p className="published-label">
+                      Already published
+                    </p>
+                  )}
+                </article>
+              ))}
+            </div>
           </section>
         )}
       </main>
