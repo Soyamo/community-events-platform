@@ -27,6 +27,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
+def log_route(request: Request):
+    return getattr(request.scope.get("route"), "path", "unmatched")
+
+
 @app.middleware("http")
 async def request_logging_middleware(request: Request, call_next):
     request_id = request.headers.get(
@@ -35,23 +40,34 @@ async def request_logging_middleware(request: Request, call_next):
     )
 
     request.state.request_id = request_id
+    try:
+        request.state.log_request_id = str(uuid.UUID(request_id))
+    except ValueError:
+        request.state.log_request_id = str(uuid.uuid4())
+
+    method = request.method if request.method in {
+        "GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS", "TRACE", "CONNECT"
+    } else "OTHER"
 
     logger.info(
-        "request_received request_id=%s method=%s path=%s",
-        request_id,
-        request.method,
-        request.url.path
+        "request_received request_id=%s method=%s",
+        request.state.log_request_id,
+        method
     )
 
-    response = await call_next(request)
+    try:
+        response = await call_next(request)
+    except Exception as exc:
+        # Handle here so the server cannot re-log raw exception text or parameters.
+        response = await unexpected_exception_handler(request, exc)
 
     response.headers["X-Request-ID"] = request_id
 
     logger.info(
-        "request_completed request_id=%s method=%s path=%s status_code=%s",
-        request_id,
-        request.method,
-        request.url.path,
+        "request_completed request_id=%s method=%s route=%s status_code=%s",
+        request.state.log_request_id,
+        method,
+        log_route(request),
         response.status_code
     )
 
@@ -69,10 +85,11 @@ async def validation_exception_handler(
     )
 
     logger.warning(
-        "validation_failed request_id=%s path=%s errors=%s",
-        request_id,
-        request.url.path,
-        exc.errors()
+        "validation_failed request_id=%s route=%s error_count=%s error_types=%s",
+        getattr(request.state, "log_request_id", "unknown"),
+        log_route(request),
+        len(exc.errors()),
+        sorted({error["type"] for error in exc.errors()})
     )
 
     return JSONResponse(
@@ -108,10 +125,11 @@ async def unexpected_exception_handler(
         "unknown"
     )
 
-    logger.exception(
-        "unexpected_error request_id=%s path=%s",
-        request_id,
-        request.url.path
+    logger.error(
+        "unexpected_error request_id=%s route=%s error_type=%s",
+        getattr(request.state, "log_request_id", "unknown"),
+        log_route(request),
+        type(exc).__name__
     )
 
     return JSONResponse(

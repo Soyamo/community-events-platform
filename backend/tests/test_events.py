@@ -1,4 +1,6 @@
 from datetime import datetime, timedelta, timezone
+import logging
+import uuid
 
 import pytest
 from fastapi.testclient import TestClient
@@ -340,8 +342,9 @@ def test_activity_failure_rolls_back_registration():
 
     sqlalchemy_event.listen(Activity, "before_insert", fail_activity_insert)
     try:
-        with pytest.raises(RuntimeError, match="Simulated activity insert failure"):
-            client.post(f"/api/events/{event_id}/registrations")
+        response = client.post(f"/api/events/{event_id}/registrations")
+        assert response.status_code == 500
+        assert response.json()["code"] == "INTERNAL_SERVER_ERROR"
     finally:
         sqlalchemy_event.remove(Activity, "before_insert", fail_activity_insert)
 
@@ -349,3 +352,98 @@ def test_activity_failure_rolls_back_registration():
         assert db.query(Registration).filter_by(event_id=event_id).count() == 0
         assert db.query(Activity).filter_by(action="REGISTRATION_CREATED").count() == 0
     assert client.post(f"/api/events/{event_id}/registrations").status_code == 201
+
+
+def test_validation_logs_exclude_body_query_and_header_values(caplog):
+    caplog.set_level(logging.INFO, logger="community-events")
+    private_value = "fictional.visitor@example.invalid"
+    response = client.post(
+        "/api/events",
+        params={"visitor": private_value},
+        headers={"X-Request-ID": private_value, "X-Private-Note": private_value},
+        json={
+            "title": private_value * 10,
+            "description": private_value,
+            "date_time": private_value,
+            "capacity": private_value,
+            "organiser_id": private_value,
+        },
+    )
+    assert response.status_code == 400
+    assert response.headers["X-Request-ID"] == private_value
+    assert response.json()["code"] == "VALIDATION_ERROR"
+    assert {error["field"] for error in response.json()["errors"]} == {
+        "title", "date_time", "capacity"
+    }
+    messages = [r.getMessage() for r in caplog.records if r.name == "community-events"]
+    assert private_value not in "\n".join(messages)
+    validation = next(message for message in messages if message.startswith("validation_failed"))
+    assert "route=/api/events" in validation
+    assert "error_count=3" in validation
+    assert "string_too_long" in validation
+    assert "int_parsing" in validation
+    log_id = validation.split("request_id=", 1)[1].split(" ", 1)[0]
+    assert str(uuid.UUID(log_id)) == log_id
+    assert all(f"request_id={log_id}" in message for message in messages)
+
+
+def test_invalid_path_logs_use_route_template_and_preserve_error_response(caplog):
+    caplog.set_level(logging.INFO, logger="community-events")
+    request_id = "3f8b4d46-8470-47c4-94c3-38c711b92e91"
+    private_value = "fictional.visitor@example.invalid"
+    response = client.post(
+        f"/api/events/{private_value}/registrations",
+        params={"visitor": private_value},
+        headers={"X-Request-ID": request_id, "X-Forwarded-For": "192.0.2.123"},
+    )
+    assert response.status_code == 400
+    assert response.headers["X-Request-ID"] == request_id
+    assert response.json() == {
+        "code": "VALIDATION_ERROR",
+        "message": "The request contains invalid data.",
+        "errors": [{
+            "field": "path.event_id",
+            "message": "Input should be a valid integer, unable to parse string as an integer",
+        }],
+    }
+    messages = [r.getMessage() for r in caplog.records if r.name == "community-events"]
+    assert private_value not in "\n".join(messages)
+    assert "192.0.2.123" not in "\n".join(messages)
+    assert messages[0] == f"request_received request_id={request_id} method=POST"
+    assert (
+        f"validation_failed request_id={request_id} "
+        "route=/api/events/{event_id}/registrations error_count=1 error_types=['int_parsing']"
+    ) in messages
+    assert "route=/api/events/{event_id}/registrations" in messages[-1]
+
+
+def test_unmatched_route_logs_do_not_include_literal_path(caplog):
+    caplog.set_level(logging.INFO, logger="community-events")
+    private_value = "fictional.visitor@example.invalid"
+    response = client.get(f"/{private_value}")
+    assert response.status_code == 404
+    messages = [r.getMessage() for r in caplog.records if r.name == "community-events"]
+    assert private_value not in "\n".join(messages)
+    assert "route=unmatched" in messages[-1]
+
+
+def test_unexpected_error_logs_exclude_exception_values(caplog, monkeypatch):
+    caplog.set_level(logging.INFO, logger="community-events")
+    private_value = "fictional.visitor@example.invalid"
+
+    def failing_db():
+        raise RuntimeError(private_value)
+
+    monkeypatch.setitem(app.dependency_overrides, get_db, failing_db)
+    response = client.get("/api/events", params={"visitor": private_value})
+    assert response.status_code == 500
+    assert response.json() == {
+        "code": "INTERNAL_SERVER_ERROR",
+        "message": "An unexpected server error occurred.",
+    }
+    records = [r for r in caplog.records if r.name == "community-events"]
+    messages = [r.getMessage() for r in records]
+    assert private_value not in "\n".join(messages)
+    assert all(record.exc_info is None for record in records)
+    assert any("route=/api/events error_type=RuntimeError" in message for message in messages)
+    assert "status_code=500" in messages[-1]
