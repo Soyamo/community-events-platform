@@ -1,13 +1,32 @@
 const API_BASE_URL = "http://127.0.0.1:8000";
 
+async function readResponse(response, fallbackMessage) {
+  const data = await response.json().catch(() => null);
+
+  if (!response.ok) {
+    const errors = data?.errors ||
+      (Array.isArray(data?.detail) ? data.detail : []);
+    const fieldMessages = errors.map((error) => {
+      const field = error.field || error.loc?.join(".");
+      const message = error.message || error.msg;
+      return field ? `${field}: ${message}` : message;
+    }).filter(Boolean);
+    const message = data?.message || data?.detail?.message ||
+      (typeof data?.detail === "string" ? data.detail : "") ||
+      fallbackMessage;
+    throw new Error([message, ...fieldMessages].join(" "));
+  }
+
+  if (data === null) {
+    throw new Error("The server returned an invalid response.");
+  }
+  return data;
+}
+
 export async function getPublishedEvents() {
   const response = await fetch(`${API_BASE_URL}/api/events`);
 
-  if (!response.ok) {
-    throw new Error("Failed to load published events.");
-  }
-
-  return response.json();
+  return readResponse(response, "Failed to load published events.");
 }
 
 export async function registerForEvent(eventId) {
@@ -18,16 +37,7 @@ export async function registerForEvent(eventId) {
     }
   );
 
-  const data = await response.json();
-
-  if (!response.ok) {
-    const message =
-      data?.detail?.message || "Registration failed.";
-
-    throw new Error(message);
-  }
-
-  return data;
+  return readResponse(response, "Registration failed.");
 }
 
 export async function getOrganiserEvents(organiserId) {
@@ -35,11 +45,7 @@ export async function getOrganiserEvents(organiserId) {
     `${API_BASE_URL}/api/organisers/${organiserId}/events`
   );
 
-  if (!response.ok) {
-    throw new Error("Failed to load organiser events.");
-  }
-
-  return response.json();
+  return readResponse(response, "Failed to load organiser events.");
 }
 
 export async function createEvent(eventData) {
@@ -51,18 +57,7 @@ export async function createEvent(eventData) {
     body: JSON.stringify(eventData),
   });
 
-  const data = await response.json();
-
-  if (!response.ok) {
-    const message =
-      data?.detail?.message ||
-      data?.detail?.[0]?.msg ||
-      "Failed to create event.";
-
-    throw new Error(message);
-  }
-
-  return data;
+  return readResponse(response, "Failed to create event.");
 }
 
 export async function updateEvent(
@@ -81,28 +76,13 @@ export async function updateEvent(
     }
   );
 
-  const data = await response.json();
-
-  if (!response.ok) {
-    const message =
-      data?.detail?.message ||
-      data?.detail?.[0]?.msg ||
-      "Failed to update event.";
-
-    throw new Error(message);
-  }
-
-  return data;
+  return readResponse(response, "Failed to update event.");
 }
 
 export async function getAllEvents() {
   const response = await fetch(`${API_BASE_URL}/api/admin/events`);
 
-  if (!response.ok) {
-    throw new Error("Failed to load events.");
-  }
-
-  return response.json();
+  return readResponse(response, "Failed to load events.");
 }
 
 export async function publishEvent(eventId) {
@@ -113,14 +93,5 @@ export async function publishEvent(eventId) {
     }
   );
 
-  const data = await response.json();
-
-  if (!response.ok) {
-    const message =
-      data?.detail?.message || "Failed to publish event.";
-
-    throw new Error(message);
-  }
-
-  return data;
+  return readResponse(response, "Failed to publish event.");
 }

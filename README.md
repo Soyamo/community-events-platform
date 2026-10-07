@@ -264,7 +264,7 @@ The virtual environment, SQLite database, Node modules and other generated files
 Ensure the following are installed:
 
 - Python 3.9 or later
-- Node.js
+- Node.js 22.13.x or 24.x (compatible with the locked Vite and ESLint versions)
 - npm
 - Git
 
@@ -272,11 +272,7 @@ Ensure the following are installed:
 
 # Backend Setup
 
-From the project root:
-
-```powershell
-cd D:\community-events-platform
-```
+Run the following commands from the root of your cloned repository.
 
 Create a Python virtual environment if one does not already exist:
 
@@ -307,7 +303,7 @@ pip install -r backend\requirements.txt
 Start the FastAPI server:
 
 ```powershell
-uvicorn backend.app.main:app --reload
+uvicorn backend.app.main:app --reload --no-access-log
 ```
 
 The backend will run at:
@@ -337,7 +333,7 @@ The application can be populated with fictional demo events using the included s
 With the backend virtual environment activated, run from the project root:
 
 ```powershell
-python backend\seed.py
+python -m backend.seed
 ```
 
 The script creates sample events for:
@@ -368,7 +364,7 @@ cd frontend
 Install dependencies:
 
 ```powershell
-npm install
+npm ci
 ```
 
 Start the React development server:
@@ -564,7 +560,11 @@ The backend enforces the following rules.
 - Title is required.
 - Event date/time must be valid.
 - Event date/time cannot be in the past.
+- Event dates without an offset are interpreted in the backend machine's local timezone, matching the React `datetime-local` input when browser and backend use the same timezone. Offset-bearing dates are converted to that local timezone before validation and stored/returned without an offset. Seed dates use the same local-time convention.
 - Capacity must be a whole number greater than zero.
+- Boolean capacity values and whitespace-only titles or organiser identifiers are rejected.
+- Updates may omit fields, but cannot explicitly set title, date/time, or capacity to null. Description may be cleared with null.
+- Capacity cannot be reduced below the number of existing registrations; this returns `409 Conflict` with code `CAPACITY_BELOW_REGISTRATIONS`.
 - Organiser identifier is required.
 
 ## Publishing
@@ -678,6 +678,8 @@ Example:
 
 The backend uses application logging for important operations.
 
+Start Uvicorn with `--no-access-log` as shown above so its default access logger does not record visitor IP addresses. Application request logs remain enabled.
+
 Every request receives a request/correlation ID.
 
 If the caller supplies:
@@ -736,7 +738,7 @@ Run:
 pytest backend\tests -v
 ```
 
-Current test suite:
+The original core test scenarios are:
 
 ```text
 test_create_event_successfully
@@ -749,11 +751,7 @@ test_reject_registration_for_unpublished_event
 test_reject_registration_when_event_is_full
 ```
 
-Current result:
-
-```text
-8 passed
-```
+Additional regression tests cover timezone-bearing dates, null required update fields, nullable descriptions, whitespace-only required text, boolean capacity, capacity reductions, persisted registration activity, and rollback when activity creation fails.
 
 The tests use a separate in-memory SQLite database so automated testing does not modify the application's normal database.
 
@@ -931,7 +929,7 @@ The current implementation intentionally has several limitations.
 - There is no registration cancellation workflow.
 - Duplicate anonymous registrations are allowed.
 - Registration capacity checks are designed for the scope of this exercise and do not implement advanced concurrency control.
-- There is no pagination or filtering.
+- There is no pagination or visitor search/filtering. The Administrator view includes status filtering for all, pending, or published events.
 - There is no event rejection workflow.
 - There is no event cancellation workflow.
 - There is no cloud deployment.
@@ -950,7 +948,7 @@ With additional development time, possible improvements would include:
 - Database migrations using Alembic.
 - Registration counts displayed directly on events.
 - Admin activity/history dashboard.
-- Event search and filtering.
+- Visitor event search and filtering.
 - Pagination.
 - Event cancellation or rejection workflows.
 - More backend test scenarios.

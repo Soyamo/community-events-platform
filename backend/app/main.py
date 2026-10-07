@@ -309,8 +309,7 @@ def register_interest(
     )
 
     db.add(registration)
-    db.commit()
-    db.refresh(registration)
+    db.flush()
 
     activity = models.Activity(
         event_id=event_id,
@@ -320,6 +319,7 @@ def register_interest(
 
     db.add(activity)
     db.commit()
+    db.refresh(registration)
 
     logger.info(
         "registration_created event_id=%s registration_id=%s outcome=success",
@@ -358,6 +358,21 @@ def update_event(
         )
 
     update_data = event_update.model_dump(exclude_unset=True)
+
+    if "capacity" in update_data:
+        registration_count = (
+            db.query(models.Registration)
+            .filter(models.Registration.event_id == event_id)
+            .count()
+        )
+        if update_data["capacity"] < registration_count:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail={
+                    "code": "CAPACITY_BELOW_REGISTRATIONS",
+                    "message": "Capacity cannot be reduced below the number of existing registrations."
+                }
+            )
 
     for field, value in update_data.items():
         setattr(event, field, value)

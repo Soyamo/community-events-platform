@@ -15,6 +15,7 @@ function App() {
   const [organiserLoading, setOrganiserLoading] = useState(false);
   const [organiserError, setOrganiserError] = useState("");
   const [organiserMessage, setOrganiserMessage] = useState("");
+  const [organiserSaving, setOrganiserSaving] = useState(false);
   const [adminFilter, setAdminFilter] = useState("ALL");
 
   const [editingEventId, setEditingEventId] = useState(null);
@@ -81,6 +82,23 @@ function App() {
     setEditingEventId(null);
   }
 
+  function handleOrganiserChange(event) {
+    resetEventForm();
+    setOrganiserEvents([]);
+    setOrganiserLoading(true);
+    setOrganiserError("");
+    setOrganiserMessage("");
+    setOrganiserId(event.target.value);
+  }
+
+  function handleRoleChange(event) {
+    if (event.target.value === "organiser") {
+      setOrganiserEvents([]);
+      setOrganiserLoading(true);
+    }
+    setRole(event.target.value);
+  }
+
   function startEditingEvent(event) {
     setEditingEventId(event.id);
 
@@ -97,8 +115,12 @@ function App() {
 
   async function handleEventSubmit(event) {
     event.preventDefault();
+    if (organiserSaving || organiserLoading) {
+      return;
+    }
 
     try {
+      setOrganiserSaving(true);
       setOrganiserError("");
       setOrganiserMessage("");
 
@@ -141,6 +163,8 @@ function App() {
       setOrganiserEvents(refreshedEvents);
     } catch (error) {
       setOrganiserError(error.message);
+    } finally {
+      setOrganiserSaving(false);
     }
   }
 
@@ -192,6 +216,8 @@ function App() {
       return;
     }
 
+    let active = true;
+
     async function loadOrganiserEvents() {
       try {
         setOrganiserLoading(true);
@@ -199,15 +225,24 @@ function App() {
         setOrganiserMessage("");
 
         const data = await getOrganiserEvents(organiserId);
-        setOrganiserEvents(data);
+        if (active) {
+          setOrganiserEvents(data);
+        }
       } catch (error) {
-        setOrganiserError(error.message);
+        if (active) {
+          setOrganiserError(error.message);
+        }
       } finally {
-        setOrganiserLoading(false);
+        if (active) {
+          setOrganiserLoading(false);
+        }
       }
     }
 
     loadOrganiserEvents();
+    return () => {
+      active = false;
+    };
   }, [role, organiserId]);
 
   useEffect(() => {
@@ -256,7 +291,8 @@ function App() {
           <select
             id="role"
             value={role}
-            onChange={(event) => setRole(event.target.value)}
+            onChange={handleRoleChange}
+            disabled={organiserSaving}
           >
             <option value="visitor">Visitor</option>
             <option value="organiser">Event Organiser</option>
@@ -272,9 +308,8 @@ function App() {
               <select
                 id="organiser"
                 value={organiserId}
-                onChange={(event) =>
-                  setOrganiserId(event.target.value)
-                }
+                onChange={handleOrganiserChange}
+                disabled={organiserSaving}
               >
                 <option value="organiser-1">
                   Organiser 1
@@ -412,6 +447,7 @@ function App() {
                 name="title"
                 value={eventForm.title}
                 onChange={handleEventFormChange}
+                disabled={organiserSaving}
                 required
               />
 
@@ -424,6 +460,7 @@ function App() {
                 name="description"
                 value={eventForm.description}
                 onChange={handleEventFormChange}
+                disabled={organiserSaving}
               />
 
               <label htmlFor="date_time">
@@ -436,6 +473,7 @@ function App() {
                 type="datetime-local"
                 value={eventForm.date_time}
                 onChange={handleEventFormChange}
+                disabled={organiserSaving}
                 required
               />
 
@@ -450,14 +488,18 @@ function App() {
                 min="1"
                 value={eventForm.capacity}
                 onChange={handleEventFormChange}
+                disabled={organiserSaving}
                 required
               />
 
               <button
                 className="primary-button"
                 type="submit"
+                disabled={organiserSaving || organiserLoading}
               >
-                {editingEventId
+                {organiserSaving
+                  ? "Saving..."
+                  : editingEventId
                   ? "Update Event"
                   : "Create Event"}
               </button>
@@ -467,6 +509,7 @@ function App() {
                   className="secondary-button"
                   type="button"
                   onClick={resetEventForm}
+                  disabled={organiserSaving}
                 >
                   Cancel Edit
                 </button>
@@ -513,6 +556,7 @@ function App() {
 
                   <button
                     className="secondary-button"
+                    disabled={organiserSaving || organiserLoading}
                     onClick={() =>
                       startEditingEvent(event)
                     }
