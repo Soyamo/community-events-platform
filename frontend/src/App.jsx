@@ -286,21 +286,23 @@ function App() {
 
       <main className="main-content">
         <section className="role-card">
-          <label htmlFor="role">Role</label>
+          <div className="control-field">
+            <label htmlFor="role">Role</label>
 
-          <select
-            id="role"
-            value={role}
-            onChange={handleRoleChange}
-            disabled={organiserSaving}
-          >
-            <option value="visitor">Visitor</option>
-            <option value="organiser">Event Organiser</option>
-            <option value="admin">Administrator</option>
-          </select>
+            <select
+              id="role"
+              value={role}
+              onChange={handleRoleChange}
+              disabled={organiserSaving}
+            >
+              <option value="visitor">Visitor</option>
+              <option value="organiser">Event Organiser</option>
+              <option value="admin">Administrator</option>
+            </select>
+          </div>
 
           {role === "organiser" && (
-            <>
+            <div className="control-field">
               <label htmlFor="organiser">
                 Organiser
               </label>
@@ -318,7 +320,7 @@ function App() {
                   Organiser 2
                 </option>
               </select>
-            </>
+            </div>
           )}
         </section>
 
@@ -340,7 +342,7 @@ function App() {
             )}
 
             {loadingEvents && (
-              <p>Loading events...</p>
+              <p className="loading-message">Loading events...</p>
             )}
 
             {eventError && (
@@ -352,7 +354,7 @@ function App() {
             {!loadingEvents &&
               !eventError &&
               events.length === 0 && (
-                <p>
+                <p className="empty-message">
                   No published events are currently available.
                 </p>
               )}
@@ -365,42 +367,48 @@ function App() {
                 >
                   <h3>{event.title}</h3>
 
-                  <p>{event.description}</p>
+                  <p className="event-description">{event.description}</p>
 
-                  <p>
-                    <strong>Date:</strong>{" "}
-                    {new Date(
-                      event.date_time
-                    ).toLocaleString()}
-                  </p>
+                  <div className="event-details">
+                    <p>
+                      <strong>Date:</strong>{" "}
+                      {new Date(
+                        event.date_time
+                      ).toLocaleString()}
+                    </p>
 
-                  <p>
-                    <strong>Capacity:</strong>{" "}
-                    {event.capacity}
-                  </p>
+                    <p>
+                      <strong>Capacity:</strong>{" "}
+                      {event.capacity}
+                    </p>
 
-                  <p>
-                    <strong>Organiser:</strong>{" "}
-                    {event.organiser_id}
-                  </p>
+                    <p>
+                      <strong>Organiser:</strong>{" "}
+                      {event.organiser_id}
+                    </p>
+                  </div>
 
-                  <span className="status-badge">
-                    {event.status}
-                  </span>
+                  <div className="event-footer">
+                    <span className={`status-badge ${
+                      event.status === "PUBLISHED" ? "status-published" : "status-pending"
+                    }`}>
+                      {event.status === "PUBLISHED" ? "Published" : "Pending review"}
+                    </span>
 
-                  <button
-                    className="primary-button"
-                    onClick={() =>
-                      handleRegistration(event.id)
-                    }
-                    disabled={
-                      registeringEventId === event.id
-                    }
-                  >
-                    {registeringEventId === event.id
-                      ? "Registering..."
-                      : "Register Interest"}
-                  </button>
+                    <button
+                      className="primary-button"
+                      onClick={() =>
+                        handleRegistration(event.id)
+                      }
+                      disabled={
+                        registeringEventId === event.id
+                      }
+                    >
+                      {registeringEventId === event.id
+                        ? "Registering..."
+                        : "Register Interest"}
+                    </button>
+                  </div>
                 </article>
               ))}
             </div>
@@ -438,94 +446,106 @@ function App() {
                   : "Create Event"}
               </h3>
 
-              <label htmlFor="title">
-                Title
-              </label>
+              <div className="form-field">
+                <label htmlFor="title">
+                  Title
+                </label>
 
-              <input
-                id="title"
-                name="title"
-                value={eventForm.title}
-                onChange={handleEventFormChange}
-                disabled={organiserSaving}
-                required
-              />
-
-              <label htmlFor="description">
-                Description
-              </label>
-
-              <textarea
-                id="description"
-                name="description"
-                value={eventForm.description}
-                onChange={handleEventFormChange}
-                disabled={organiserSaving}
-              />
-
-              <label htmlFor="date_time">
-                Date and Time
-              </label>
-
-              <input
-                id="date_time"
-                name="date_time"
-                type="datetime-local"
-                value={eventForm.date_time}
-                onChange={handleEventFormChange}
-                disabled={organiserSaving}
-                required
-              />
-
-              <label htmlFor="capacity">
-                Capacity
-              </label>
-
-              <input
-                id="capacity"
-                name="capacity"
-                type="number"
-                min="1"
-                value={eventForm.capacity}
-                onChange={handleEventFormChange}
-                disabled={organiserSaving}
-                required
-              />
-
-              <button
-                className="primary-button"
-                type="submit"
-                disabled={organiserSaving || organiserLoading}
-              >
-                {organiserSaving
-                  ? "Saving..."
-                  : editingEventId
-                  ? "Update Event"
-                  : "Create Event"}
-              </button>
-
-              {editingEventId && (
-                <button
-                  className="secondary-button"
-                  type="button"
-                  onClick={resetEventForm}
+                <input
+                  id="title"
+                  name="title"
+                  value={eventForm.title}
+                  onChange={handleEventFormChange}
                   disabled={organiserSaving}
+                  required
+                />
+              </div>
+
+              <div className="form-field">
+                <label htmlFor="description">
+                  Description
+                </label>
+
+                <textarea
+                  id="description"
+                  name="description"
+                  value={eventForm.description}
+                  onChange={handleEventFormChange}
+                  disabled={organiserSaving}
+                />
+              </div>
+
+              <div className="form-row">
+                <div className="form-field">
+                  <label htmlFor="date_time">
+                    Date and Time
+                  </label>
+
+                  <input
+                    id="date_time"
+                    name="date_time"
+                    type="datetime-local"
+                    value={eventForm.date_time}
+                    onChange={handleEventFormChange}
+                    disabled={organiserSaving}
+                    required
+                  />
+                </div>
+
+                <div className="form-field">
+                  <label htmlFor="capacity">
+                    Capacity
+                  </label>
+
+                  <input
+                    id="capacity"
+                    name="capacity"
+                    type="number"
+                    min="1"
+                    value={eventForm.capacity}
+                    onChange={handleEventFormChange}
+                    disabled={organiserSaving}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="form-actions">
+                <button
+                  className="primary-button"
+                  type="submit"
+                  disabled={organiserSaving || organiserLoading}
                 >
-                  Cancel Edit
+                  {organiserSaving
+                    ? "Saving..."
+                    : editingEventId
+                    ? "Update Event"
+                    : "Create Event"}
                 </button>
-              )}
+
+                {editingEventId && (
+                  <button
+                    className="secondary-button"
+                    type="button"
+                    onClick={resetEventForm}
+                    disabled={organiserSaving}
+                  >
+                    Cancel Edit
+                  </button>
+                )}
+              </div>
             </form>
 
             <h3>Your Events</h3>
 
             {organiserLoading && (
-              <p>Loading events...</p>
+              <p className="loading-message">Loading events...</p>
             )}
 
             {!organiserLoading &&
               !organiserError &&
               organiserEvents.length === 0 && (
-                <p>No events created yet.</p>
+                <p className="empty-message">No events created yet.</p>
               )}
 
             <div className="event-grid">
@@ -536,33 +556,39 @@ function App() {
                 >
                   <h3>{event.title}</h3>
 
-                  <p>{event.description}</p>
+                  <p className="event-description">{event.description}</p>
 
-                  <p>
-                    <strong>Date:</strong>{" "}
-                    {new Date(
-                      event.date_time
-                    ).toLocaleString()}
-                  </p>
+                  <div className="event-details">
+                    <p>
+                      <strong>Date:</strong>{" "}
+                      {new Date(
+                        event.date_time
+                      ).toLocaleString()}
+                    </p>
 
-                  <p>
-                    <strong>Capacity:</strong>{" "}
-                    {event.capacity}
-                  </p>
+                    <p>
+                      <strong>Capacity:</strong>{" "}
+                      {event.capacity}
+                    </p>
+                  </div>
 
-                  <span className="status-badge">
-                    {event.status}
-                  </span>
+                  <div className="event-footer">
+                    <span className={`status-badge ${
+                      event.status === "PUBLISHED" ? "status-published" : "status-pending"
+                    }`}>
+                      {event.status === "PUBLISHED" ? "Published" : "Pending review"}
+                    </span>
 
-                  <button
-                    className="secondary-button"
-                    disabled={organiserSaving || organiserLoading}
-                    onClick={() =>
-                      startEditingEvent(event)
-                    }
-                  >
-                    Edit Event
-                  </button>
+                    <button
+                      className="secondary-button"
+                      disabled={organiserSaving || organiserLoading}
+                      onClick={() =>
+                        startEditingEvent(event)
+                      }
+                    >
+                      Edit Event
+                    </button>
+                  </div>
                 </article>
               ))}
             </div>
@@ -611,13 +637,13 @@ function App() {
             )}
 
             {adminLoading && (
-              <p>Loading events...</p>
+              <p className="loading-message">Loading events...</p>
             )}
 
             {!adminLoading &&
               !adminError &&
               filteredAdminEvents.length === 0 && (
-                <p>
+                <p className="empty-message">
                   No events are currently available.
                 </p>
               )}
@@ -630,57 +656,61 @@ function App() {
                 >
                   <h3>{event.title}</h3>
 
-                  <p>{event.description}</p>
+                  <p className="event-description">{event.description}</p>
 
-                  <p>
-                    <strong>Date:</strong>{" "}
-                    {new Date(
-                      event.date_time
-                    ).toLocaleString()}
-                  </p>
-
-                  <p>
-                    <strong>Capacity:</strong>{" "}
-                    {event.capacity}
-                  </p>
-
-                  <p>
-                    <strong>Organiser:</strong>{" "}
-                    {event.organiser_id}
-                  </p>
-
-                  <span 
-                    className={`status-badge ${
-                      event.status === "PUBLISHED"
-                        ? "status-published"
-                        : "status-pending"
-                    }`}
-                  >
-                    {event.status}
-                  </span>
-
-                  {event.status ===
-                    "PENDING_REVIEW" && (
-                    <button
-                      className="primary-button"
-                      onClick={() =>
-                        handlePublishEvent(event.id)
-                      }
-                      disabled={
-                        publishingEventId === event.id
-                      }
-                    >
-                      {publishingEventId === event.id
-                        ? "Publishing..."
-                        : "Publish Event"}
-                    </button>
-                  )}
-
-                  {event.status === "PUBLISHED" && (
-                    <p className="published-label">
-                      Already published
+                  <div className="event-details">
+                    <p>
+                      <strong>Date:</strong>{" "}
+                      {new Date(
+                        event.date_time
+                      ).toLocaleString()}
                     </p>
-                  )}
+
+                    <p>
+                      <strong>Capacity:</strong>{" "}
+                      {event.capacity}
+                    </p>
+
+                    <p>
+                      <strong>Organiser:</strong>{" "}
+                      {event.organiser_id}
+                    </p>
+                  </div>
+
+                  <div className="event-footer">
+                    <span
+                      className={`status-badge ${
+                        event.status === "PUBLISHED"
+                          ? "status-published"
+                          : "status-pending"
+                      }`}
+                    >
+                      {event.status === "PUBLISHED" ? "Published" : "Pending review"}
+                    </span>
+
+                    {event.status ===
+                      "PENDING_REVIEW" && (
+                      <button
+                        className="primary-button"
+                        onClick={() =>
+                          handlePublishEvent(event.id)
+                        }
+                        disabled={
+                          publishingEventId === event.id
+                        }
+                      >
+                        {publishingEventId === event.id
+                          ? "Publishing..."
+                          : "Publish Event"}
+                      </button>
+                    )}
+
+                    {event.status === "PUBLISHED" && (
+                      <p className="published-label">
+                        Already published
+                      </p>
+                    )}
+                  </div>
                 </article>
               ))}
             </div>
