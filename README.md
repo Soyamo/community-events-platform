@@ -1,6 +1,6 @@
 # Community Events Platform
 
-A React and FastAPI application built for the Clickatell Graduate Full-Stack Developer take-home assessment.
+Graduate Software Developer take-home assessment.
 
 | Demo role | Actions |
 |---|---|
@@ -201,6 +201,6 @@ With more time, useful improvements within this application's scope would be dis
 
 ## AI-use declaration
 
-ChatGPT and Codex were used for requirement analysis, debugging, test design, documentation proof reading, and code review.
+ChatGPT and Codex as AI coding assistants were used for requirement analysis, debugging, test design, documentation proof reading, and code review.
 
-I reviewed and integrated, and applied the generated suggestions, designed and tested API design, and frontend workflows locally, checked business rules and logs, and ran the manual and  automated checks. I remain responsible for understanding and explaining the submitted implementation.
+I reviewed and integrated, and applied the generated suggestions, designed and tested API design, and frontend workflows locally, checked business rules and logs, and ran the manual and wrote automated checks. I remain responsible for understanding and explaining the submitted implementation.
