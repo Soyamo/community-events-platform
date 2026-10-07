@@ -201,6 +201,6 @@ With more time, useful improvements within this application's scope would be dis
 
 ## AI-use declaration
 
-ChatGPT and Codex were used for requirement analysis, API design, code assistance, debugging, test design, documentation, review, and UI presentation improvements.
+ChatGPT and Codex were used for requirement analysis, debugging, test design, documentation proof reading, and code review.
 
-I reviewed and integrated the generated suggestions, tested API and frontend workflows locally, checked business rules and logs, and ran the automated checks. I remain responsible for understanding and explaining the submitted implementation.
+I reviewed and integrated, and applied the generated suggestions, designed and tested API design, and frontend workflows locally, checked business rules and logs, and ran the manual and  automated checks. I remain responsible for understanding and explaining the submitted implementation.
