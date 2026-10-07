@@ -155,17 +155,21 @@ Use seeded data and keep the backend terminal visible.
 
 ## Logging and request IDs
 
-The middleware accepts an `X-Request-ID` header or generates a UUID, then returns it in the response header. Request logs include the ID, method, path, and completion status. Validation failures and unexpected errors are logged with the request ID. Publishing and registration operation logs include relevant entity IDs and a success outcome.
+The middleware accepts an `X-Request-ID` header or generates a UUID, then returns it in the response header. A request-scoped `ContextVar` supplies the ID to every application log line, including logs from synchronous endpoint handlers. The middleware resets the context after each request. Non-UUID supplied IDs are replaced with a generated UUID in logs to avoid logging arbitrary header values; the response header retains its existing behaviour.
+
+Request logs include the method and completion status. Completion and error logs use the route template rather than literal path or query values; `request_received` omits the route because routing has not yet occurred. Validation logs contain only error counts and types, without rejected input values. No request bodies, IP addresses, or other header values are logged.
 
 A successful registration produces entries like these (timestamps omitted):
 
 ```text
-request_received request_id=<request-id> method=POST path=/api/events/1/registrations
-registration_created event_id=1 registration_id=1 outcome=success
-request_completed request_id=<request-id> method=POST path=/api/events/1/registrations status_code=201
+request_received request_id=<request-id> method=POST
+event_validated request_id=<request-id> event_id=1 operation=register_interest outcome=success
+registration_created request_id=<request-id> event_id=1 registration_id=1 outcome=success
+activity_recorded request_id=<request-id> event_id=1 registration_id=1 action=REGISTRATION_CREATED outcome=success
+request_completed request_id=<request-id> method=POST route=/api/events/{event_id}/registrations status_code=201
 ```
 
-The same transaction also writes the registration's activity record to SQLite.
+`event_validated` confirms that the event exists, is published, and has capacity. Registration and activity success logs are emitted only after their shared transaction commits, so a rollback cannot produce a false stored/recorded success message. Publishing also logs its activity record with the same request ID.
 
 ## Tests and frontend checks
 

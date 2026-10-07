@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta, timezone
+from concurrent.futures import ThreadPoolExecutor
 import logging
 import uuid
 
@@ -11,6 +12,7 @@ from sqlalchemy.orm import sessionmaker
 from backend.app.database import Base, get_db
 from backend.app.main import app
 from backend.app.models import Activity, Event, Registration
+from backend.app.logging_config import request_id_context
 
 
 TEST_DATABASE_URL = "sqlite://"
@@ -355,9 +357,11 @@ def test_successful_registration_persists_activity():
         assert registration.event_id == activity.event_id == event_id
 
 
-def test_activity_failure_rolls_back_registration():
+def test_activity_failure_rolls_back_registration(caplog):
     event_id = create_event(capacity=1).json()["id"]
     assert client.post(f"/api/admin/events/{event_id}/publish").status_code == 200
+    caplog.set_level(logging.INFO, logger="community-events")
+    caplog.clear()
 
     def fail_activity_insert(mapper, connection, target):
         if target.action == "REGISTRATION_CREATED":
@@ -374,7 +378,61 @@ def test_activity_failure_rolls_back_registration():
     with TestingSessionLocal() as db:
         assert db.query(Registration).filter_by(event_id=event_id).count() == 0
         assert db.query(Activity).filter_by(action="REGISTRATION_CREATED").count() == 0
+    messages = [r.getMessage() for r in caplog.records if r.name == "community-events"]
+    assert any(message.startswith("event_validated ") for message in messages)
+    assert not any(message.startswith(("registration_created ", "activity_recorded ")) for message in messages)
     assert client.post(f"/api/events/{event_id}/registrations").status_code == 201
+
+
+@pytest.mark.parametrize("supplied_id", [
+    "3f8b4d46-8470-47c4-94c3-38c711b92e91",
+    "fictional.visitor@example.invalid",
+])
+def test_registration_flow_logs_share_safe_request_id(caplog, supplied_id):
+    event_id = create_event().json()["id"]
+    client.post(f"/api/admin/events/{event_id}/publish")
+    caplog.set_level(logging.INFO, logger="community-events")
+    caplog.clear()
+
+    response = client.post(
+        f"/api/events/{event_id}/registrations",
+        headers={"X-Request-ID": supplied_id},
+    )
+    assert response.status_code == 201
+    assert response.headers["X-Request-ID"] == supplied_id
+    records = [r for r in caplog.records if r.name == "community-events"]
+    messages = [r.getMessage() for r in records]
+    assert [message.split(" ", 1)[0] for message in messages] == [
+        "request_received", "event_validated", "registration_created",
+        "activity_recorded", "request_completed",
+    ]
+    log_id = records[0].request_id
+    assert str(uuid.UUID(log_id)) == log_id
+    assert all(record.request_id == log_id for record in records)
+    assert all(f"request_id={log_id}" in message for message in messages)
+    assert f"registration_id={response.json()['id']}" in messages[2]
+    assert "action=REGISTRATION_CREATED" in messages[3]
+    if "@" in supplied_id:
+        assert supplied_id not in "\n".join(messages)
+    else:
+        assert log_id == supplied_id
+
+
+def test_request_log_context_is_isolated_between_requests(caplog):
+    caplog.set_level(logging.INFO, logger="community-events")
+    request_ids = [str(uuid.uuid4()), str(uuid.uuid4())]
+
+    def health_request(request_id):
+        return client.get("/health", headers={"X-Request-ID": request_id})
+
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        responses = list(executor.map(health_request, request_ids))
+    assert all(response.status_code == 200 for response in responses)
+    records = [r for r in caplog.records if r.name == "community-events"]
+    for request_id in request_ids:
+        operations = [r.getMessage().split(" ", 1)[0] for r in records if r.request_id == request_id]
+        assert operations == ["request_received", "request_completed"]
+    assert request_id_context.get() == "none"
 
 
 def test_validation_logs_exclude_body_query_and_header_values(caplog):

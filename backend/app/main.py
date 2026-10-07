@@ -7,7 +7,7 @@ from typing import List
 import uuid
 
 from fastapi import Request
-from .logging_config import logger
+from .logging_config import logger, request_id_context
 from . import models, schemas
 from .database import Base, engine, get_db
 
@@ -45,33 +45,32 @@ async def request_logging_middleware(request: Request, call_next):
     except ValueError:
         request.state.log_request_id = str(uuid.uuid4())
 
-    method = request.method if request.method in {
-        "GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS", "TRACE", "CONNECT"
-    } else "OTHER"
-
-    logger.info(
-        "request_received request_id=%s method=%s",
-        request.state.log_request_id,
-        method
-    )
-
+    token = request_id_context.set(request.state.log_request_id)
     try:
-        response = await call_next(request)
-    except Exception as exc:
-        # Handle here so the server cannot re-log raw exception text or parameters.
-        response = await unexpected_exception_handler(request, exc)
+        method = request.method if request.method in {
+            "GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS", "TRACE", "CONNECT"
+        } else "OTHER"
 
-    response.headers["X-Request-ID"] = request_id
+        logger.info("request_received method=%s", method)
 
-    logger.info(
-        "request_completed request_id=%s method=%s route=%s status_code=%s",
-        request.state.log_request_id,
-        method,
-        log_route(request),
-        response.status_code
-    )
+        try:
+            response = await call_next(request)
+        except Exception as exc:
+            # Handle here so the server cannot re-log raw exception text or parameters.
+            response = await unexpected_exception_handler(request, exc)
 
-    return response
+        response.headers["X-Request-ID"] = request_id
+
+        logger.info(
+            "request_completed method=%s route=%s status_code=%s",
+            method,
+            log_route(request),
+            response.status_code
+        )
+
+        return response
+    finally:
+        request_id_context.reset(token)
 
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(
@@ -85,8 +84,7 @@ async def validation_exception_handler(
     )
 
     logger.warning(
-        "validation_failed request_id=%s route=%s error_count=%s error_types=%s",
-        getattr(request.state, "log_request_id", "unknown"),
+        "validation_failed route=%s error_count=%s error_types=%s",
         log_route(request),
         len(exc.errors()),
         sorted({error["type"] for error in exc.errors()})
@@ -126,8 +124,7 @@ async def unexpected_exception_handler(
     )
 
     logger.error(
-        "unexpected_error request_id=%s route=%s error_type=%s",
-        getattr(request.state, "log_request_id", "unknown"),
+        "unexpected_error route=%s error_type=%s",
         log_route(request),
         type(exc).__name__
     )
@@ -289,6 +286,10 @@ def publish_event(
         "event_published event_id=%s outcome=success",
         event.id
     )
+    logger.info(
+        "activity_recorded event_id=%s action=EVENT_PUBLISHED outcome=success",
+        event.id
+    )
 
     return event_response(event, db)
 
@@ -340,6 +341,11 @@ def register_interest(
             }
         )
 
+    logger.info(
+        "event_validated event_id=%s operation=register_interest outcome=success",
+        event_id
+    )
+
     registration = models.Registration(
         event_id=event_id
     )
@@ -359,6 +365,11 @@ def register_interest(
 
     logger.info(
         "registration_created event_id=%s registration_id=%s outcome=success",
+        event_id,
+        registration.id
+    )
+    logger.info(
+        "activity_recorded event_id=%s registration_id=%s action=REGISTRATION_CREATED outcome=success",
         event_id,
         registration.id
     )
