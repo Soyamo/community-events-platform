@@ -181,3 +181,87 @@
   font-weight: 600;
   color: #166534;
 }
+
+.filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 20px 0;
+}
+
+.filter-bar label {
+  font-weight: 600;
+}
+
+.filter-bar select {
+  padding: 10px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  background: white;
+  font-size: 0.95rem;
+}
+
+.event-card {
+  border: 1px solid #e5e7eb;
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.event-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.09);
+}
+
+.status-badge {
+  display: inline-block;
+  margin-top: 8px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.success-message,
+.error-message {
+  padding: 12px 14px;
+  border-radius: 8px;
+}
+
+.error-message {
+  background: #fef2f2;
+  color: #991b1b;
+}
+
+.app-header h1 {
+  font-size: 2.2rem;
+  margin-bottom: 8px;
+}
+
+.dashboard-section > h2 {
+  margin-bottom: 6px;
+}
+
+.role-card {
+  border: 1px solid #e5e7eb;
+}
+
+button {
+  transition:
+    background 0.15s ease,
+    transform 0.1s ease;
+}
+
+button:active {
+  transform: scale(0.99);
+}
+
+.status-published {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.status-pending {
+  background: #fef3c7;
+  color: #92400e;
+}

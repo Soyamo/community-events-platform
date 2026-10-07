@@ -15,6 +15,7 @@ function App() {
   const [organiserLoading, setOrganiserLoading] = useState(false);
   const [organiserError, setOrganiserError] = useState("");
   const [organiserMessage, setOrganiserMessage] = useState("");
+  const [adminFilter, setAdminFilter] = useState("ALL");
 
   const [editingEventId, setEditingEventId] = useState(null);
 
@@ -231,6 +232,15 @@ function App() {
 
     loadAdminEvents();
   }, [role]);
+
+
+  const filteredAdminEvents = adminEvents.filter((event) => {
+    if (adminFilter === "ALL") {
+      return true;
+    }
+
+    return event.status === adminFilter;
+  });
 
   return (
     <div className="app-shell">
@@ -520,9 +530,29 @@ function App() {
             <h2>Administrator</h2>
 
             <p>
-              Review all events and publish events awaiting
-              review.
+              Review all events and publish events awaiting review.
             </p>
+            <div className="filter-bar">
+              <label htmlFor="admin-filter">
+                Filter events
+              </label>
+
+              <select
+                id="admin-filter"
+                value={adminFilter}
+                onChange={(event) =>
+                  setAdminFilter(event.target.value)
+                }
+              >
+                <option value="ALL">All Events</option>
+                <option value="PENDING_REVIEW">
+                  Pending Review
+                </option>
+                <option value="PUBLISHED">
+                  Published
+                </option>
+              </select>
+            </div>
 
             {adminMessage && (
               <p className="success-message">
@@ -542,14 +572,14 @@ function App() {
 
             {!adminLoading &&
               !adminError &&
-              adminEvents.length === 0 && (
+              filteredAdminEvents.length === 0 && (
                 <p>
                   No events are currently available.
                 </p>
               )}
 
             <div className="event-grid">
-              {adminEvents.map((event) => (
+              {filteredAdminEvents.map((event) => (
                 <article
                   className="event-card"
                   key={event.id}
@@ -575,7 +605,13 @@ function App() {
                     {event.organiser_id}
                   </p>
 
-                  <span className="status-badge">
+                  <span 
+                    className={`status-badge ${
+                      event.status === "PUBLISHED"
+                        ? "status-published"
+                        : "status-pending"
+                    }`}
+                  >
                     {event.status}
                   </span>
 
