@@ -281,8 +281,7 @@ function App() {
     <div className="app-shell">
       <header className="app-header">
         <h1>Community Events Platform</h1>
-        <p>Community connections, made simple.</p>
-        <p className="header-guidance">Select a demo role to continue.</p>
+        <p>Select a demo role to continue.</p>
       </header>
 
       <main className="main-content">

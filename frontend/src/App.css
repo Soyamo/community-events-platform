@@ -5,7 +5,7 @@
 .app-shell {
   min-height: 100vh;
   padding: 40px 24px;
-  background: radial-gradient(ellipse at top left, #eaf0ff 0, transparent 55%), #faf9f6;
+  background: #f6f7f8;
   color: #1f2937;
   line-height: 1.5;
 }
@@ -13,28 +13,20 @@
 .app-header {
   max-width: 1100px;
   margin: 0 auto 24px;
-  padding: 40px 24px;
-  border-radius: 16px;
-  background: linear-gradient(120deg, #1e40af, #4338ca);
-  color: white;
-  box-shadow: 0 8px 24px rgba(30, 64, 175, 0.12);
-  text-align: center;
+  padding: 0 0 24px;
+  border-bottom: 1px solid #d9dee3;
+  text-align: left;
 }
 
 .app-header h1 {
   margin: 0 0 8px;
-  font-size: 2.2rem;
+  font-size: 2rem;
   line-height: 1.2;
 }
 
 .app-header p {
   margin: 0;
-  color: #e0e7ff;
-}
-
-.app-header .header-guidance {
-  margin-top: 12px;
-  font-size: 0.85rem;
+  color: #59636e;
 }
 
 .main-content {
@@ -47,8 +39,7 @@
 .event-card {
   background: white;
   border: 1px solid #e5e7eb;
-  border-radius: 12px;
-  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.04);
+  border-radius: 8px;
 }
 
 .role-card {
@@ -56,7 +47,7 @@
   flex-wrap: wrap;
   gap: 16px;
   max-width: 720px;
-  margin: 0 auto;
+  margin: 0;
   padding: 20px;
 }
 
@@ -108,7 +99,7 @@
   margin: 0 0 8px;
   font-size: 1.5rem;
   line-height: 1.3;
-  color: #1e3a8a;
+  color: #1f2937;
 }
 
 .dashboard-section > h3 {
@@ -135,15 +126,6 @@
   min-width: 0;
   padding: 24px;
   overflow-wrap: anywhere;
-  border-top: 4px solid #818cf8;
-  transition: box-shadow 0.15s ease, border-color 0.15s ease;
-}
-
-@media (hover: hover) {
-  .event-card:hover {
-    border-top-color: #4f46e5;
-    box-shadow: 0 8px 24px rgba(30, 64, 175, 0.1);
-  }
 }
 
 .event-card h3 {
@@ -174,10 +156,8 @@
 }
 
 .event-details p:first-child {
-  padding: 8px 10px;
-  border-radius: 6px;
-  background: #eef2ff;
-  color: #3730a3;
+  color: #1f2937;
+  font-weight: 600;
 }
 
 .event-details strong {
@@ -228,12 +208,12 @@
 }
 
 .primary-button {
-  background: #2563eb;
+  background: #285a86;
   color: white;
 }
 
 .primary-button:hover:not(:disabled) {
-  background: #1d4ed8;
+  background: #20496d;
 }
 
 .secondary-button {
@@ -267,7 +247,7 @@
 .app-shell input:focus-visible,
 .app-shell textarea:focus-visible,
 .app-shell select:focus-visible {
-  outline: 2px solid #2563eb;
+  outline: 2px solid #285a86;
   outline-offset: 3px;
 }
 
@@ -376,7 +356,7 @@
   }
 
   .app-header {
-    padding: 28px 16px;
+    padding: 0 0 20px;
   }
 
   .role-card,
@@ -419,7 +399,6 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .event-card,
   .primary-button,
   .secondary-button {
     transition: none;
