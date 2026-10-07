@@ -179,7 +179,25 @@ def create_event(
     db.commit()
     db.refresh(new_event)
 
-    return new_event
+    return event_response(new_event, db)
+
+
+def event_response(event: models.Event, db: Session):
+    registration_count = (
+        db.query(models.Registration)
+        .filter(models.Registration.event_id == event.id)
+        .count()
+    )
+    return {
+        "id": event.id,
+        "title": event.title,
+        "description": event.description,
+        "date_time": event.date_time,
+        "capacity": event.capacity,
+        "status": event.status,
+        "organiser_id": event.organiser_id,
+        "remaining_spots": max(0, event.capacity - registration_count),
+    }
 
 @app.get(
     "/api/events",
@@ -194,7 +212,7 @@ def get_published_events(
         .all()
     )
 
-    return events
+    return [event_response(event, db) for event in events]
 
 
 @app.get(
@@ -211,7 +229,7 @@ def get_organiser_events(
         .all()
     )
 
-    return events
+    return [event_response(event, db) for event in events]
 
 
 @app.get(
@@ -221,7 +239,7 @@ def get_organiser_events(
 def get_all_events(
     db: Session = Depends(get_db)
 ):
-    return db.query(models.Event).all()
+    return [event_response(event, db) for event in db.query(models.Event).all()]
 
 @app.post(
     "/api/admin/events/{event_id}/publish",
@@ -272,7 +290,7 @@ def publish_event(
         event.id
     )
 
-    return event
+    return event_response(event, db)
 
 @app.post(
     "/api/events/{event_id}/registrations",
@@ -398,4 +416,4 @@ def update_event(
     db.commit()
     db.refresh(event)
 
-    return event
+    return event_response(event, db)

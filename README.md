@@ -110,12 +110,14 @@ Publishing records an `EVENT_PUBLISHED` activity. Registering interest records a
 - New events start as `PENDING_REVIEW`. Visitors see only `PUBLISHED` events.
 - Titles and organiser identifiers are trimmed and cannot be blank. Titles are limited to 200 characters and organiser identifiers to 100.
 - Event dates must be valid and in the future when supplied on creation or update.
-- Offset-free dates use the backend machine's local timezone. Offset-bearing dates are converted to that timezone before validation and stored/returned without an offset. The React `datetime-local` input and seed script use local time; the demo assumes browser and backend share the same timezone.
+- Offset-free dates use the backend machine's local timezone. Offset-bearing dates are converted to that timezone before validation and stored/returned without an offset. Cards and edit forms both display browser-local time, converting any offset-bearing response consistently. The React `datetime-local` input and seed script use local time; the demo assumes browser and backend share the same timezone.
 - Capacity must be a positive whole number; booleans are rejected.
 - Updates can omit fields, but `title`, `date_time`, and `capacity` cannot explicitly be null. Description can be cleared with null.
-- Updates must match the organiser identifier in the route. Editing a published event leaves it published.
-- Capacity cannot be reduced below existing registrations.
+- Updates must match the organiser identifier in the route. Organisers may edit their published events; changes are immediately visible to visitors and do not trigger another review. Existing registrations and activity records are retained.
+- Capacity cannot be reduced below existing registrations (409 / `CAPACITY_BELOW_REGISTRATIONS`). It may equal the registration count, making the event full, or increase to reopen available spots.
 - Registration is allowed only for published events with remaining capacity. Publishing an already published event is rejected.
+
+Event responses include `remaining_spots`, calculated from capacity minus persisted registrations. Visitor cards show the remaining spots or **Full**, disable registration when full, and display registration feedback on the card. Availability refreshes after successful registration; the backend remains authoritative if another visitor fills an event in the meantime.
 
 ## API reference
 
@@ -147,7 +149,7 @@ Use seeded data and keep the backend terminal visible.
 1. **Visitor:** Select Visitor, inspect the published event cards, and register interest in Community Coding Workshop. Confirm the success message and generated registration ID.
 2. **Organiser:** Select Event Organiser and Organiser 1. Create an event with a future date and positive capacity. Confirm its Pending review badge, edit it, and verify the updated values. Switch to Organiser 2 to confirm a different event list. Switch to Visitor and confirm the new pending event is absent.
 3. **Administrator:** Select Administrator, use the Pending Review filter, and publish the event created in step 2. Switch to Visitor and confirm it is visible.
-4. **Capacity rule:** Register interest in Small Coding Session, whose seeded capacity is one. A second registration returns the full-event error. This assumes the event has no existing registrations.
+4. **Capacity rule:** Register interest in Small Coding Session, whose seeded capacity is one. Its card shows **Full** and disables further registration. A second call to its registration endpoint in Swagger returns **409 / EVENT_FULL**. This assumes the event has no existing registrations.
 5. **Unpublished rule:** In Swagger UI, use `GET /api/admin/events` to find a pending event ID. Call its registration endpoint and confirm **409 / EVENT_NOT_PUBLISHED**.
 6. **Logging:** Perform a registration and inspect the request, operation, and completion logs described below.
 
@@ -180,9 +182,12 @@ Run the frontend checks from `frontend`:
 ```powershell
 npm run lint
 npm run build
+node --test tests/dates.test.js
 ```
 
-The most recent verification completed with **23 backend tests passed**, frontend lint passed, and production build passed. Frontend unit tests are not included; use the demonstration guide to check the UI workflows.
+Focused frontend date tests cover local, UTC, and offset-bearing input. Use the demonstration guide to check the UI workflows.
+
+Frontend state lives in separate `VisitorView`, `OrganiserView`, and `AdminView` components. `RoleSwitcher` provides the demo controls and `EventCard` shares the card layout. Switching organisers resets the form and event list; editing a card scrolls to the form.
 
 ## Scope and trade-offs
 
@@ -192,7 +197,7 @@ The most recent verification completed with **23 backend tests passed**, fronten
 - Administrator status filtering is included. Visitor search, pagination, event rejection/cancellation, and registration cancellation are not implemented.
 - The project runs locally with one backend service. Docker, cloud deployment, CI/CD, and real messaging integrations are intentionally excluded.
 
-With more time, useful improvements within this application's scope would be displaying remaining capacity and activity history, adding visitor filtering, and adding focused frontend workflow tests.
+With more time, useful improvements within this application's scope would be displaying activity history, adding visitor filtering, and adding focused frontend workflow tests.
 
 ## AI-use declaration
 

@@ -48,6 +48,7 @@ class EventResponse(BaseModel):
     capacity: int
     status: str
     organiser_id: str
+    remaining_spots: int
 
 
 class RegistrationResponse(BaseModel):

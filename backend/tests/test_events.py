@@ -105,6 +105,29 @@ def test_reject_invalid_capacity():
     assert data["message"] == "The request contains invalid data."
 
 
+def test_remaining_spots_follow_registrations_and_capacity_edits():
+    created = create_event(capacity=2).json()
+    event_id = created["id"]
+    assert created["remaining_spots"] == 2
+    published = client.post(f"/api/admin/events/{event_id}/publish")
+    assert published.json()["remaining_spots"] == 2
+
+    assert client.post(f"/api/events/{event_id}/registrations").status_code == 201
+    for route in ["/api/events", "/api/admin/events", "/api/organisers/organiser-1/events"]:
+        assert client.get(route).json()[0]["remaining_spots"] == 1
+
+    assert client.post(f"/api/events/{event_id}/registrations").status_code == 201
+    assert client.get("/api/events").json()[0]["remaining_spots"] == 0
+    assert client.post(f"/api/events/{event_id}/registrations").status_code == 409
+
+    updated = client.put(
+        f"/api/organisers/organiser-1/events/{event_id}",
+        json={"capacity": 3, "title": "Updated published event"},
+    )
+    assert updated.status_code == 200
+    assert updated.json()["status"] == "PUBLISHED"
+    assert updated.json()["remaining_spots"] == 1
+    assert client.get("/api/events").json()[0]["title"] == "Updated published event"
 
 def test_reject_past_event_date():
     response = create_event(
